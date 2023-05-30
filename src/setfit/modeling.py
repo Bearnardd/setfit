@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple, Union
 
+from .config import SetFitConfig
 
 # Google Colab runs on Python 3.7, so we need this to be compatible
 try:
@@ -276,6 +277,20 @@ class SetFitModel(PyTorchModelHubMixin):
     def has_differentiable_head(self) -> bool:
         # if False, sklearn is assumed to be used instead
         return isinstance(self.model_head, nn.Module)
+
+    @property
+    def config(self) -> SetFitConfig:
+        model_body_config = self.model_body._modules["0"]._modules["auto_model"].config
+
+        model_head_config = None
+        if isinstance(self.model_head, SetFitHead):
+            model_head_config = self.model_head.get_config_dict()
+
+        return SetFitConfig(model_body=model_body_config, model_head=model_head_config)
+
+    @config.setter
+    def config(self, config: SetFitConfig) -> None:
+        self.model_body._modules["0"]._modules["auto_model"].config = config.model_body
 
     def fit(
         self,
